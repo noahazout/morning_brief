@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morning Brief</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --surface3: #1e1e27;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e8f0;
+    --text-muted: #8888a0;
+    --text-dim: #55556a;
+    --blue: #4f8ef7;
+    --blue-soft: rgba(79,142,247,0.12);
+    --blue-dim: rgba(79,142,247,0.07);
+    --accent: #93c5fd;
+    --green: #34d399;
+    --red: #f87171;
+    --gold: #fbbf24;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+  /* TOPBAR */
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 32px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+  .topbar-brand { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 600; color: var(--text); }
+  .topbar-brand span { color: var(--accent); font-weight: 300; }
+  .topbar-right { display: flex; gap: 16px; align-items: center; }
+  .topbar-date { font-size: 12px; color: var(--accent); }
+  .topbar-status { font-size: 11px; color: var(--text-dim); }
+
+  .page { max-width: 780px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* ACTION PANEL */
+  .action-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px 24px; margin-bottom: 28px; }
+  .action-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+  .action-left {}
+  .action-title { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .action-sub { font-size: 12px; color: var(--text-muted); }
+  .btn-primary { background: var(--blue); color: #fff; border: none; border-radius: 10px; padding: 12px 22px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: opacity 0.15s, transform 0.1s; flex-shrink: 0; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .divider { height: 1px; background: var(--border); margin-bottom: 16px; }
+  .update-label { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+  .update-row { display: flex; gap: 10px; align-items: flex-start; }
+  .update-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text); resize: none; outline: none; min-height: 40px; line-height: 1.5; transition: border-color 0.15s; }
+  .update-input::placeholder { color: var(--text-dim); }
+  .update-input:focus { border-color: rgba(79,142,247,0.3); }
+  .btn-secondary { background: var(--surface3); color: var(--accent); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 16px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.15s; flex-shrink: 0; }
+  .btn-secondary:hover { background: var(--surface2); }
+  .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .update-hint { font-size: 11px; color: var(--text-dim); margin-top: 8px; }
+  .update-hint em { color: var(--text-muted); font-style: normal; }
+
+  /* LOADING */
+  #loading { display: none; text-align: center; padding: 60px 20px; }
+  .spinner { width: 28px; height: 28px; border: 2px solid var(--border2); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text-muted); }
+  .loading-step { font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+
+  /* EMPTY STATE */
+  #empty-state { text-align: center; padding: 80px 20px; }
+  .empty-icon { font-size: 40px; margin-bottom: 16px; opacity: 0.4; }
+  .empty-title { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 300; color: var(--text-muted); margin-bottom: 8px; }
+  .empty-sub { font-size: 13px; color: var(--text-dim); }
+
+  /* BRIEF OUTPUT */
+  #brief-output { display: none; }
+  #brief-output.visible { display: block; animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* LAST UPDATED */
+  .last-updated { font-size: 11px; color: var(--text-dim); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+  .last-updated::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; }
+
+  /* HERO */
+  .hero { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 20px; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; position: relative; overflow: hidden; }
+  .hero::before { content: ''; position: absolute; top: -40px; left: -40px; width: 240px; height: 240px; background: radial-gradient(circle, rgba(79,142,247,0.08) 0%, transparent 70%); pointer-events: none; }
+  .hero-label { font-size: 10px; letter-spacing: 0.15em; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; }
+  .hero-time { font-family: 'Sora', sans-serif; font-size: 52px; font-weight: 300; color: var(--text); line-height: 1; letter-spacing: -0.03em; margin-bottom: 4px; }
+  .hero-sub { font-size: 13px; color: var(--text-muted); }
+  .hero-blocks { display: flex; flex-direction: column; gap: 5px; }
+  .hb { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .hb-time { color: var(--accent); font-weight: 500; min-width: 52px; text-align: right; font-size: 11px; }
+  .hb-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--surface3); flex-shrink: 0; }
+  .hb-dot.on { background: var(--blue); box-shadow: 0 0 5px rgba(79,142,247,0.5); }
+
+  /* WEATHER */
+  .weather-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px 24px; margin-bottom: 20px; }
+  .weather-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .weather-city { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 600; color: var(--text); }
+  .weather-outfit { background: var(--blue-dim); border: 1px solid rgba(79,142,247,0.12); border-radius: 8px; padding: 8px 14px; font-size: 12px; color: var(--accent); max-width: 260px; text-align: right; }
+  .weather-outfit-label { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: var(--text-dim); display: block; margin-bottom: 2px; }
+  .weather-periods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .wp { background: var(--surface2); border-radius: 10px; padding: 14px; text-align: center; }
+  .wp-label { font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+  .wp-icon { font-size: 24px; margin-bottom: 6px; line-height: 1; }
+  .wp-temp { font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 300; color: var(--text); line-height: 1; margin-bottom: 4px; }
+  .wp-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+
+  /* SECTION */
+  .section { margin-bottom: 24px; }
+  .sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .sec-label { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
+  .sec-rule { flex: 1; height: 1px; background: var(--border); }
+
+  /* CALENDAR */
+  .cal-list { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+  .cal-row { display: grid; grid-template-columns: 130px 1fr; padding: 11px 18px; border-bottom: 1px solid var(--border); align-items: center; }
+  .cal-row:last-child { border-bottom: none; }
+  .cal-row.star { background: var(--blue-dim); }
+  .cal-time { font-size: 11px; color: var(--text-dim); font-weight: 500; }
+  .cal-name { font-size: 13px; color: var(--text); }
+  .cal-row.star .cal-name { color: var(--accent); font-weight: 500; }
+  .cal-tag { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; background: var(--blue); color: white; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+
+  /* ACADEMICS */
+  .notion-group { margin-bottom: 12px; }
+  .ng-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .ng-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .ng-label.tests { color: var(--red); }
+  .ng-label.assign { color: #fb923c; }
+  .ng-label.reads { color: var(--blue); }
+  .notion-list { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .notion-row { display: grid; grid-template-columns: 1fr 80px 72px; padding: 11px 16px; border-bottom: 1px solid var(--border); align-items: center; gap: 12px; }
+  .notion-row:last-child { border-bottom: none; }
+  .notion-row.urgent { background: rgba(248,113,113,0.04); }
+  .notion-row.warn { background: rgba(251,191,36,0.03); }
+  .n-name { font-size: 13px; color: var(--text); }
+  .n-course { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+  .n-due { font-size: 11px; color: var(--text-muted); text-align: right; }
+  .n-days { font-size: 11px; font-weight: 600; text-align: right; }
+  .n-days.hot { color: var(--red); }
+  .n-days.warm { color: var(--gold); }
+  .n-days.cool { color: var(--text-dim); }
+  .nbadge { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; padding: 1px 5px; border-radius: 3px; margin-left: 5px; vertical-align: middle; }
+  .nb-test { background: rgba(248,113,113,0.12); color: var(--red); }
+  .nb-assign { background: rgba(251,146,60,0.12); color: #fb923c; }
+  .nb-read { background: var(--blue-soft); color: var(--blue); }
+  .notion-empty { padding: 14px 16px; font-size: 12px; color: var(--text-dim); text-align: center; }
+
+  /* MARKETS */
+  .m-alert { background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.15); border-radius: 10px; padding: 12px 16px; font-size: 12px; color: #c8960e; line-height: 1.6; margin-bottom: 12px; }
+  .m-alert strong { color: var(--gold); }
+  .mgrid { display: grid; gap: 8px; margin-bottom: 8px; }
+  .g1 { grid-template-columns: 1fr; }
+  .g2 { grid-template-columns: repeat(2,1fr); }
+  .g3 { grid-template-columns: repeat(3,1fr); }
+  .mcard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .mcard.oil { border-color: rgba(251,191,36,0.2); }
+  .mflag { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 4px; margin-bottom: 5px; }
+  .mf-earn { background: rgba(251,191,36,0.12); color: var(--gold); }
+  .mf-target { background: rgba(52,211,153,0.1); color: var(--green); }
+  .mf-watch { background: rgba(248,113,113,0.1); color: var(--red); }
+  .mticker { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 3px; }
+  .mprice { font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 300; color: var(--text); line-height: 1.1; margin-bottom: 3px; }
+  .mchange { font-size: 11px; font-weight: 500; margin-bottom: 7px; }
+  .up { color: var(--green); }
+  .dn { color: var(--red); }
+  .nt { color: var(--text-muted); }
+  .mctx { font-size: 11px; color: var(--text-dim); line-height: 1.55; border-top: 1px solid var(--border); padding-top: 7px; }
+  .mctx strong { color: var(--text-muted); font-weight: 500; }
+
+  /* NEWS */
+  .news-intro { background: var(--blue-dim); border: 1px solid rgba(79,142,247,0.1); border-radius: 10px; padding: 11px 16px; font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.55; }
+  .news-intro strong { color: var(--accent); }
+  .news-list { display: flex; flex-direction: column; gap: 10px; }
+  .ncard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .nmeta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .ntag { font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--blue); background: var(--blue-soft); padding: 2px 7px; border-radius: 4px; }
+  .nnum { font-size: 11px; color: var(--text-dim); }
+  .nhead { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.35; margin-bottom: 8px; }
+  .nbody { font-size: 12px; color: var(--text-muted); line-height: 1.7; margin-bottom: 10px; }
+  .nwsj { display: flex; align-items: flex-start; gap: 8px; background: var(--surface2); border-radius: 8px; padding: 9px 12px; font-size: 11px; color: var(--text-muted); line-height: 1.55; }
+  .nwsj-pill { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: var(--blue); background: var(--blue-soft); padding: 2px 6px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; }
+
+  /* CONCEPT */
+  .concept-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; position: relative; overflow: hidden; }
+  .concept-card::before { content: ''; position: absolute; bottom: -40px; right: -40px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(79,142,247,0.06) 0%, transparent 70%); pointer-events: none; }
+  .concept-word { font-family: 'Sora', sans-serif; font-size: 28px; font-weight: 300; color: var(--accent); letter-spacing: -0.02em; margin-bottom: 12px; }
+  .concept-def { font-size: 13px; color: var(--text-muted); line-height: 1.75; }
+  .concept-def strong { color: var(--text); font-weight: 500; }
+  .concept-ex { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-dim); line-height: 1.7; }
+  .concept-ex strong { color: var(--accent); font-weight: 500; }
+
+  .footer { padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-top: 16px; }
+
+  @media (max-width: 600px) {
+    .topbar { padding: 12px 16px; }
+    .page { padding: 20px 16px 60px; }
+    .action-top { flex-direction: column; align-items: flex-start; }
+    .btn-primary { width: 100%; text-align: center; }
+    .hero { grid-template-columns: 1fr; padding: 22px 20px; }
+    .hero-time { font-size: 40px; }
+    .g2, .g3 { grid-template-columns: repeat(2,1fr); }
+    .weather-header { flex-direction: column; gap: 10px; }
+    .weather-outfit { max-width: 100%; text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">Morning <span>Brief</span></div>
+  <div class="topbar-right">
+    <div class="topbar-status" id="topbar-status">Not generated</div>
+    <div class="topbar-date" id="topbar-date"></div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ACTION PANEL -->
+  <div class="action-panel">
+    <div class="action-top">
+      <div class="action-left">
+        <div class="action-title">Generate today's brief</div>
+        <div class="action-sub">Calendar · weather · Notion · markets · news — rendered right here.</div>
+      </div>
+      <button class="btn-primary" id="generate-btn" onclick="generateBrief()">Generate →</button>
+    </div>
+    <div class="divider"></div>
+    <div class="update-label">Quick update</div>
+    <div class="update-row">
+      <textarea class="update-input" id="update-input" rows="1" placeholder="e.g. skipping gym today · meeting moved to 2pm · need to leave earlier…" oninput="autoResize(this)"></textarea>
+      <button class="btn-secondary" id="update-btn" onclick="sendUpdate()">Update →</button>
+    </div>
+    <div class="update-hint">Change to your day — I'll regenerate just the schedule with updated timing. <em>Try: "no gym today", "first meeting pushed to 11"</em></div>
+  </div>
+
+  <!-- LOADING -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Pulling your brief...</div>
+    <div class="loading-step" id="loading-step">Connecting to calendar, weather, and Notion</div>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div id="empty-state">
+    <div class="empty-icon">☀️</div>
+    <div class="empty-title">Good morning, Noah.</div>
+    <div class="empty-sub">Hit Generate to pull today's brief.</div>
+  </div>
+
+  <!-- BRIEF OUTPUT -->
+  <div id="brief-output"></div>
+
+  <div class="footer">
+    <div>Morning Brief · Noah Azout · UChicago</div>
+    <div>Bookmark this file — open every morning</div>
+  </div>
+</div>
+
+<script>
+  // Date setup
+  const d = new Date();
+  const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dateStr = DAYS[d.getDay()] + ', ' + MONTHS[d.getMonth()] + ' ' + d.getDate();
+  const shortDate = SHORT_MONTHS[d.getMonth()] + ' ' + d.getDate();
+  document.getElementById('topbar-date').textContent = shortDate;
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+  }
+
+  function setLoading(on) {
+    document.getElementById('loading').style.display = on ? 'block' : 'none';
+    document.getElementById('empty-state').style.display = on ? 'none' : (document.getElementById('brief-output').classList.contains('visible') ? 'none' : 'block');
+    document.getElementById('generate-btn').disabled = on;
+    document.getElementById('update-btn').disabled = on;
+  }
+
+  function setStep(msg) {
+    document.getElementById('loading-step').textContent = msg;
+  }
+
+  async function callClaude(prompt) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `You are generating a morning brief for Noah Azout, a first-year at UChicago studying economics and CS, recruiting for IB/PE. 
+
+You must respond with ONLY valid JSON — no markdown, no backticks, no preamble. The JSON must exactly match the schema provided in the user message. Every field is required.
+
+Today's date: ${dateStr}.
+Location: Chicago, IL.
+
+Noah's routine:
+- WITH GYM: 5min snooze + 20min morning routine (brush teeth, wash face, dress, banana) + 5min walk to gym + 60min workout + 20min post-gym (shower, skincare, dress) + 20min brief + protein shake + 10min walk = 2hr 20min before first commitment.
+- WITHOUT GYM: 20min (shower, skincare, dress) + 20min brief + protein shake + 10min walk = 50min before first commitment.
+
+Noah's jackets (from lightest to warmest): rain jacket, light Arcteryx spring jacket, heavier Patagonia jacket, Canada Goose winter jacket. Not a shorts guy.
+
+Notion Assignment Tracker database ID: collection://250e37d0-1897-809b-828f-000bf3e4e4ad
+Fields: Title, Course (relation), Due Date, Status (Not Started/Pending/Completed), Topic/Task/Test (Assignment/Topic/Test/Quiz)`,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
+    const clean = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(clean);
+  }
+
+  async function generateBrief() {
+    setLoading(true);
+    document.getElementById('topbar-status').textContent = 'Generating...';
+
+    const gymDay = !document.getElementById('update-input').value.toLowerCase().includes('no gym') &&
+                   !document.getElementById('update-input').value.toLowerCase().includes('skip gym');
+
+    const prompt = `Generate Noah's morning brief for today (${dateStr}). Return ONLY this JSON structure with real data:
+
+{
+  "schedule": {
+    "gymDay": true,
+    "wakeUp": "6:35 AM",
+    "label": "First commitment at 9:00 AM",
+    "blocks": [
+      {"time": "6:35", "label": "Wake up + banana", "active": true},
+      {"time": "7:05", "label": "Gym (60 min)", "active": true},
+      {"time": "8:05", "label": "Shower + skincare", "active": false},
+      {"time": "8:25", "label": "Brief + protein shake", "active": true},
+      {"time": "8:45", "label": "Walk to first commitment", "active": false}
+    ],
+    "sub": "Monday Apr 13 · Gym 7:05–8:05 · Brief at 8:25"
+  },
+  "weather": {
+    "outfit": "Jeans, light sweater, Arcteryx jacket",
+    "morning": {"temp": "44°F", "icon": "🌥️", "desc": "Cloudy, light wind"},
+    "afternoon": {"temp": "52°F", "icon": "🌦️", "desc": "Chance of showers"},
+    "evening": {"temp": "47°F", "icon": "🌧️", "desc": "Rain, windy"}
+  },
+  "calendar": [
+    {"time": "9:00 – 10:00 AM", "name": "Bowline Weekly Meeting", "featured": false},
+    {"time": "5:00 – 6:00 PM", "name": "Finance Career Pathways Panel · Ida Noyes", "featured": true}
+  ],
+  "academics": {
+    "tests": [
+      {"name": "Exam 1", "course": "Macroeconomics", "due": "Apr 15", "daysLeft": 2, "urgency": "hot"}
+    ],
+    "assignments": [
+      {"name": "Problem Set 3", "course": "Biology", "due": "Apr 14", "daysLeft": 1, "urgency": "hot"}
+    ],
+    "readings": []
+  },
+  "markets": {
+    "alert": "Risk-off morning. Goldman Sachs Q1 earnings drop pre-market. Oil +7.8% on Hormuz blockade announcement.",
+    "tickers": [
+      {"ticker": "SPY", "name": "S&P 500 ETF", "price": "~552", "change": "Futures –1.3%", "dir": "dn", "context": "The broad market benchmark. Down today on oil spike and war escalation — investors rotating into safe assets.", "flag": null},
+      {"ticker": "QQQ", "name": "Nasdaq 100 ETF", "price": "611.07", "change": "Futures –1.4%", "dir": "dn", "context": "Tech-heavy index. Slightly worse than SPY — tech valuations most sensitive to inflation/rate fears.", "flag": null},
+      {"ticker": "10Y Yield", "name": "Treasury Yield", "price": "~4.35%", "change": "Tug-of-war", "dir": "nt", "context": "The most important number in finance — the risk-free rate. Hot inflation pushes it up; war fear pushes bonds up (yields down). Know this cold.", "flag": null},
+      {"ticker": "GS", "name": "Goldman Sachs", "price": "Reports AM", "change": "Est. EPS ~$16.35", "dir": "nt", "context": "Beat → pop. Miss → drop. Watch M&A commentary — signals Wall Street hiring appetite.", "flag": "earn"},
+      {"ticker": "JPM", "name": "JPMorgan Chase", "price": "$310.00", "change": "Futures –1.1%", "dir": "dn", "context": "Largest US bank. Reports Tuesday. Consumer results show how inflation is hitting real Americans. Future employer.", "flag": "earn"},
+      {"ticker": "MS", "name": "Morgan Stanley", "price": "—", "change": "Reports Wed", "dir": "nt", "context": "Wealth + IB. Strong equity markets YTD should boost wealth division. Reports Wednesday.", "flag": "earn"},
+      {"ticker": "BX", "name": "Blackstone", "price": "—", "change": "Risk-off ↓", "dir": "dn", "context": "World's largest alt asset manager. War = deal uncertainty = PE slows new investments.", "flag": "target"},
+      {"ticker": "APO", "name": "Apollo Global", "price": "—", "change": "Risk-off ↓", "dir": "dn", "context": "Heavy private credit and insurance — more defensive than BX. Still feeling geopolitical pressure.", "flag": "target"},
+      {"ticker": "KKR", "name": "KKR & Co.", "price": "—", "change": "Risk-off ↓", "dir": "dn", "context": "Infrastructure + energy exposure — blockade directly affects their portfolio.", "flag": "target"}
+    ],
+    "oil": {"price": "~$103/bbl", "change": "+7.8% ↑", "context": "The number behind every move today. Oil at $103 → higher gas → higher inflation → Fed can't cut → higher borrowing costs → slower economy → stocks fall. The Strait of Hormuz carries ~20% of global oil. This chain is critical for recruiting."}
+  },
+  "news": [
+    {
+      "tag": "Geopolitics",
+      "headline": "US Navy begins blockade of Strait of Hormuz at 10 AM ET",
+      "body": "After 21 hours of failed peace talks in Islamabad, Trump ordered a naval blockade of all vessels entering or leaving Iranian ports, starting this morning. Oil spiked 8%, S&P futures down 1.3%, Dow futures pointing to open down 580+ points.",
+      "wsj": "Search 'Strait of Hormuz blockade' in WSJ Markets. Question to answer: why does a blockade send oil UP and stocks DOWN simultaneously? Write that chain in your own words."
+    },
+    {
+      "tag": "Wall Street",
+      "headline": "Goldman Sachs Q1 earnings this morning — big bank week kicks off",
+      "body": "Goldman reports before the bell (EPS est. ~$16.35, revenue ~$16.9B). JPMorgan and Citi on Tuesday, Morgan Stanley and BofA on Wednesday. Trading revenue expected strong; M&A pipelines cautious since Feb 28.",
+      "wsj": "Search 'Goldman Sachs earnings' in WSJ Finance after 8 AM. Look for: beat or miss, what drove it (trading vs. banking), what management said about M&A outlook."
+    },
+    {
+      "tag": "Macro",
+      "headline": "US consumer confidence hits record low as inflation runs at 3.3%",
+      "body": "University of Michigan survey showed April confidence plunged to a record low. Inflation hit 3.3% in March — triple February's pace. IMF expected to downgrade global growth forecasts this week.",
+      "wsj": "Search 'consumer confidence April 2026' in WSJ Economy. Core question: how does this data change what the Fed does next with rates?"
+    }
+  ],
+  "concept": {
+    "term": "EPS — Earnings Per Share",
+    "def": "A company's net profit divided by shares outstanding — how much profit is generated per share. The single most-watched number in any earnings report.",
+    "example": "Goldman's consensus EPS is ~$16.35. Report $17.50 → stock pops. Report $15.00 → stock drops — regardless of absolute profit. The market only cares about beat vs. miss relative to analyst expectations. You'll analyze this constantly on the job."
+  }
+}
+
+Use today's actual date (${dateStr}) for all calculations. The weather, market data, calendar events, and Notion assignments should reflect real current information where possible. For calendar events pull from Google Calendar for today. For Notion pull assignments/tests due within 5 days (assignments/readings) or 10 days (tests) with status not Completed. Return ONLY the JSON object.`;
+
+    try {
+      setStep('Fetching calendar, weather, Notion, and markets...');
+      const data = await callClaude(prompt);
+      renderBrief(data);
+      document.getElementById('topbar-status').textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    } catch(e) {
+      document.getElementById('topbar-status').textContent = 'Error — try again';
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendUpdate() {
+    const input = document.getElementById('update-input');
+    const update = input.value.trim();
+    if (!update) return;
+
+    const outputEl = document.getElementById('brief-output');
+    if (!outputEl.classList.contains('visible')) {
+      alert('Generate the full brief first, then use Quick Update to adjust it.');
+      return;
+    }
+
+    setLoading(true);
+    document.getElementById('topbar-status').textContent = 'Updating schedule...';
+    setStep('Recalculating your schedule...');
+
+    const prompt = `Noah has an update: "${update}"
+
+Today is ${dateStr}. Recalculate his morning schedule and return ONLY a JSON object with this exact structure:
+
+{
+  "schedule": {
+    "gymDay": true,
+    "wakeUp": "7:10 AM",
+    "label": "First commitment at 10:00 AM",
+    "blocks": [
+      {"time": "7:10", "label": "Wake up + banana", "active": true},
+      {"time": "7:35", "label": "Walk to gym", "active": false},
+      {"time": "7:40", "label": "Gym (60 min)", "active": true},
+      {"time": "8:40", "label": "Shower + skincare", "active": false},
+      {"time": "9:00", "label": "Brief + protein shake", "active": true},
+      {"time": "9:20", "label": "Walk to class", "active": false}
+    ],
+    "sub": "Updated · Gym 7:40–8:40 · Brief at 9:00"
+  }
+}
+
+Time blocks:
+- WITH GYM: 5min snooze + 20min routine + 5min walk to gym + 60min workout + 20min post-gym + 20min brief + protein shake + 10min walk = 2hr 20min before first commitment
+- WITHOUT GYM: 20min (shower, skincare, dress) + 20min brief + 10min walk = 50min before first commitment
+
+Return ONLY the JSON. No markdown, no backticks.`;
+
+    try {
+      const data = await callClaude(prompt);
+      // Update only the schedule section in the existing brief
+      updateScheduleSection(data.schedule);
+      document.getElementById('topbar-status').textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      input.value = '';
+      input.style.height = 'auto';
+    } catch(e) {
+      document.getElementById('topbar-status').textContent = 'Error — try again';
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function updateScheduleSection(s) {
+    const hero = document.getElementById('hero-section');
+    if (hero) hero.outerHTML = renderHeroHTML(s);
+  }
+
+  function renderHeroHTML(s) {
+    const blocks = s.blocks.map(b => `
+      <div class="hb">
+        <span class="hb-time">${b.time}</span>
+        <div class="hb-dot ${b.active ? 'on' : ''}"></div>
+        ${b.label}
+      </div>`).join('');
+    return `<div class="hero" id="hero-section">
+      <div>
+        <div class="hero-label">${s.label}</div>
+        <div class="hero-time">${s.wakeUp}</div>
+        <div class="hero-sub">${s.sub}</div>
+      </div>
+      <div class="hero-blocks">${blocks}</div>
+    </div>`;
+  }
+
+  function renderBrief(data) {
+    const s = data.schedule;
+    const w = data.weather;
+    const cal = data.calendar;
+    const acad = data.academics;
+    const mkt = data.markets;
+    const news = data.news;
+    const concept = data.concept;
+
+    // HERO
+    const heroHTML = renderHeroHTML(s);
+
+    // WEATHER
+    const weatherHTML = `
+    <div class="weather-card">
+      <div class="weather-header">
+        <div>
+          <div class="weather-city">Chicago, IL</div>
+        </div>
+        <div class="weather-outfit">
+          <span class="weather-outfit-label">WEAR TODAY</span>
+          ${w.outfit}
+        </div>
+      </div>
+      <div class="weather-periods">
+        <div class="wp"><div class="wp-label">Morning</div><div class="wp-icon">${w.morning.icon}</div><div class="wp-temp">${w.morning.temp}</div><div class="wp-desc">${w.morning.desc}</div></div>
+        <div class="wp"><div class="wp-label">Afternoon</div><div class="wp-icon">${w.afternoon.icon}</div><div class="wp-temp">${w.afternoon.temp}</div><div class="wp-desc">${w.afternoon.desc}</div></div>
+        <div class="wp"><div class="wp-label">Evening</div><div class="wp-icon">${w.evening.icon}</div><div class="wp-temp">${w.evening.temp}</div><div class="wp-desc">${w.evening.desc}</div></div>
+      </div>
+    </div>`;
+
+    // CALENDAR
+    const calRows = cal.map(e => `
+      <div class="cal-row ${e.featured ? 'star' : ''}">
+        <div class="cal-time">${e.time}</div>
+        <div class="cal-name">${e.name}${e.featured ? '<span class="cal-tag">GO</span>' : ''}</div>
+      </div>`).join('');
+    const calHTML = `
+    <div class="section">
+      <div class="sec-head"><div class="sec-label">Today's Schedule</div><div class="sec-rule"></div></div>
+      <div class="cal-list">${calRows}</div>
+    </div>`;
+
+    // ACADEMICS
+    function renderNotionGroup(items, label, cls, badgeCls, badgeText) {
+      const rows = items.length === 0
+        ? `<div class="notion-empty">Nothing due — you're clear ✓</div>`
+        : items.map(i => `
+          <div class="notion-row ${i.urgency === 'hot' ? 'urgent' : i.urgency === 'warm' ? 'warn' : ''}">
+            <div>
+              <div class="n-name">${i.name}<span class="nbadge ${badgeCls}">${badgeText}</span></div>
+              <div class="n-course">${i.course}</div>
+            </div>
+            <div class="n-due">${i.due}</div>
+            <div class="n-days ${i.urgency === 'hot' ? 'hot' : i.urgency === 'warm' ? 'warm' : 'cool'}">${i.daysLeft === 0 ? 'Today' : i.daysLeft === 1 ? 'Tomorrow' : i.daysLeft + ' days'}</div>
+          </div>`).join('');
+      return `<div class="notion-group"><div class="ng-label ${cls}">${label}</div><div class="notion-list">${rows}</div></div>`;
+    }
+    const acadHTML = `
+    <div class="section">
+      <div class="sec-head"><div class="sec-label">Academics · Notion</div><div class="sec-rule"></div></div>
+      ${renderNotionGroup(acad.tests, 'Tests & Quizzes — next 10 days', 'tests', 'nb-test', 'TEST')}
+      ${renderNotionGroup(acad.assignments, 'Assignments — next 5 days', 'assign', 'nb-assign', 'ASSIGN')}
+      ${renderNotionGroup(acad.readings, 'Readings & Topics — next 5 days', 'reads', 'nb-read', 'READ')}
+    </div>`;
+
+    // MARKETS
+    function flagHTML(f) {
+      if (!f) return '';
+      const map = { earn: ['mf-earn','EARNINGS'], target: ['mf-target','TARGET EMPLOYER'], watch: ['mf-watch','WATCH'] };
+      const [cls, txt] = map[f] || ['',''];
+      return `<div class="mflag ${cls}">${txt}</div>`;
+    }
+    const tickerCards = mkt.tickers.map(t => `
+      <div class="mcard">
+        ${flagHTML(t.flag)}
+        <div class="mticker">${t.ticker} · ${t.name}</div>
+        <div class="mprice">${t.price}</div>
+        <div class="mchange ${t.dir}">${t.change}</div>
+        <div class="mctx">${t.context}</div>
+      </div>`).join('');
+    const marketsHTML = `
+    <div class="section">
+      <div class="sec-head"><div class="sec-label">Markets</div><div class="sec-rule"></div></div>
+      ${mkt.alert ? `<div class="m-alert"><strong>🚨</strong> ${mkt.alert}</div>` : ''}
+      <div class="mgrid g2" style="margin-bottom:8px">${tickerCards.slice(0, tickerCards.indexOf('</div>', tickerCards.indexOf('</div>')+1)+6)}</div>
+      <div class="mgrid g3" style="margin-bottom:8px">
+        ${mkt.tickers.slice(3,6).map(t => `<div class="mcard">${flagHTML(t.flag)}<div class="mticker">${t.ticker} · ${t.name}</div><div class="mprice">${t.price}</div><div class="mchange ${t.dir}">${t.change}</div><div class="mctx">${t.context}</div></div>`).join('')}
+      </div>
+      <div class="mgrid g3" style="margin-bottom:8px">
+        ${mkt.tickers.slice(6,9).map(t => `<div class="mcard">${flagHTML(t.flag)}<div class="mticker">${t.ticker} · ${t.name}</div><div class="mprice">${t.price}</div><div class="mchange ${t.dir}">${t.change}</div><div class="mctx">${t.context}</div></div>`).join('')}
+      </div>
+      <div class="mgrid g1">
+        <div class="mcard oil">
+          <div class="mflag mf-watch">DRIVING EVERYTHING TODAY</div>
+          <div class="mticker">BRENT CRUDE OIL</div>
+          <div class="mprice" style="color:var(--gold)">${mkt.oil.price}</div>
+          <div class="mchange up">${mkt.oil.change}</div>
+          <div class="mctx">${mkt.oil.context}</div>
+        </div>
+      </div>
+    </div>`;
+
+    // NEWS
+    const newsCards = news.map((n, i) => `
+      <div class="ncard">
+        <div class="nmeta"><div class="ntag">${n.tag}</div><div class="nnum">0${i+1}</div></div>
+        <div class="nhead">${n.headline}</div>
+        <div class="nbody">${n.body}</div>
+        <div class="nwsj"><div class="nwsj-pill">READ IN WSJ</div>${n.wsj}</div>
+      </div>`).join('');
+    const newsHTML = `
+    <div class="section">
+      <div class="sec-head"><div class="sec-label">Top Stories</div><div class="sec-rule"></div></div>
+      <div class="news-intro"><strong>How to use this:</strong> Quick summaries before you open WSJ. Each card has a search term and a specific question to answer when reading the full article. Go in with a purpose.</div>
+      <div class="news-list">${newsCards}</div>
+    </div>`;
+
+    // CONCEPT
+    const conceptHTML = `
+    <div class="section">
+      <div class="sec-head"><div class="sec-label">Concept of the Day</div><div class="sec-rule"></div></div>
+      <div class="concept-card">
+        <div class="concept-word">${concept.term}</div>
+        <div class="concept-def">${concept.def}</div>
+        <div class="concept-ex"><strong>Why it matters today:</strong> ${concept.example}</div>
+      </div>
+    </div>`;
+
+    const outputEl = document.getElementById('brief-output');
+    outputEl.innerHTML = `
+      <div class="last-updated">Brief generated at ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} — ${dateStr}</div>
+      ${heroHTML}
+      ${weatherHTML}
+      ${calHTML}
+      ${acadHTML}
+      ${marketsHTML}
+      ${newsHTML}
+      ${conceptHTML}`;
+
+    outputEl.classList.add('visible');
+    document.getElementById('empty-state').style.display = 'none';
+  }
+
+  // Enter to submit update
+  document.getElementById('update-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendUpdate(); }
+  });
+</script>
+</body>
+</html>
